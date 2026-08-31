@@ -22,7 +22,8 @@ export const createExam = async (req: Request, res: Response) => {
     });
     res.status(201).json(exam);
   } catch (error: any) {
-    res.status(400).json({ error: error.errors || 'Failed to create exam' });
+    console.error('CREATE EXAM ERROR:', error);
+    res.status(400).json({ error: error?.message || 'Failed to create exam', fullError: error });
   }
 };
 
