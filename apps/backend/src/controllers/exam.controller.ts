@@ -5,6 +5,15 @@ import { createExamSchema, submitAnswerSchema } from '@codenbrowser/validation';
 export const createExam = async (req: Request, res: Response) => {
   try {
     const data = createExamSchema.parse(req.body);
+    
+    // DEMO FIX: Auto-create the institution if it doesn't exist to prevent foreign key errors
+    let institution = await prisma.institution.findUnique({ where: { id: req.user!.institutionId } });
+    if (!institution) {
+      institution = await prisma.institution.create({
+        data: { id: req.user!.institutionId, name: 'Demo Institution' }
+      });
+    }
+
     const exam = await prisma.exam.create({
       data: {
         ...data,
