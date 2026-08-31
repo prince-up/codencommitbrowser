@@ -9,7 +9,7 @@ COPY packages ./packages
 COPY apps/backend ./apps/backend
 
 # Install dependencies utilizing npm workspaces
-RUN npm ci --include-workspace-root
+RUN npm install --include-workspace-root
 
 # Generate Prisma Client specifically for alpine architecture
 RUN npx prisma generate --schema=apps/backend/src/db/schema.prisma
