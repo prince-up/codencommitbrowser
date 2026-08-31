@@ -31,9 +31,10 @@ ENV NODE_ENV=production
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
+COPY --from=builder /app/apps/backend/prisma ./apps/backend/prisma
 COPY --from=builder /app/apps/backend/package.json ./apps/backend/
 
 EXPOSE 4000
 
-# Start server statelessly
-CMD ["node", "apps/backend/dist/index.js"]
+# Start server: Push DB schema first (creates tables), then run
+CMD ["sh", "-c", "npx prisma db push --schema=apps/backend/prisma/schema.prisma --accept-data-loss && node apps/backend/dist/index.js"]
