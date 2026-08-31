@@ -84,7 +84,7 @@ export const submitAnswer = async (req: Request, res: Response) => {
     // Verify time limit (server-authoritative)
     const elapsedMinutes = (new Date().getTime() - session.startTime!.getTime()) / 60000;
     if (elapsedMinutes > session.exam.durationMinutes) {
-      await prisma.examSession.update({ where: { id: sessionId }, data: { status: 'TIME_LIMIT' }});
+      await prisma.examSession.update({ where: { id: sessionId }, data: { status: 'TERMINATED' }});
       return res.status(403).json({ error: 'Time limit exceeded' });
     }
 
