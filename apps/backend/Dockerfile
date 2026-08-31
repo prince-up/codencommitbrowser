@@ -14,6 +14,10 @@ RUN npm install --include-workspace-root
 # Generate Prisma Client specifically for alpine architecture
 RUN npx prisma generate --schema=apps/backend/prisma/schema.prisma
 
+# Build the shared packages first so the backend can find their dist folders
+RUN npm run build -w @codenbrowser/shared-types
+RUN npm run build -w @codenbrowser/validation
+
 # Build the backend application
 RUN npm run build -w @codenbrowser/backend
 
