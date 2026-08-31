@@ -15,7 +15,7 @@ RUN npm install --include-workspace-root
 RUN npx prisma generate --schema=apps/backend/prisma/schema.prisma
 
 # Build the backend application
-RUN npm run build -w @anazk/backend
+RUN npm run build -w @codenbrowser/backend
 
 # Production Runner
 FROM node:18-alpine AS runner
