@@ -14,7 +14,8 @@ export default function App() {
     if (!token) return;
 
     // Connect to the secure /proctor namespace on the backend
-    const newSocket = io('http://localhost:4000/proctor', {
+    const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+    const newSocket = io(`${BACKEND_URL}/proctor`, {
       auth: { token }
     });
 
