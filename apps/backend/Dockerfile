@@ -12,7 +12,7 @@ COPY apps/backend ./apps/backend
 RUN npm install --include-workspace-root
 
 # Generate Prisma Client specifically for alpine architecture
-RUN npx prisma generate --schema=apps/backend/src/db/schema.prisma
+RUN npx prisma generate --schema=apps/backend/prisma/schema.prisma
 
 # Build the backend application
 RUN npm run build -w @anazk/backend
