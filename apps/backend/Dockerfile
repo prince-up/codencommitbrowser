@@ -29,8 +29,7 @@ ENV NODE_ENV=production
 
 # Copy built assets and dependencies from builder
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
-COPY --from=builder /app/packages/validation/dist ./packages/validation/dist
+COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
 COPY --from=builder /app/apps/backend/package.json ./apps/backend/
 
