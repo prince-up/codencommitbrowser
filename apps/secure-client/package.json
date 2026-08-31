@@ -1,0 +1,16 @@
+{
+  "name": "@codenbrowser/secure-client",
+  "version": "1.0.0",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "electron dist/main.js"
+  },
+  "dependencies": {
+    "electron-is-dev": "^2.0.0"
+  },
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "typescript": "^5.3.3"
+  }
+}

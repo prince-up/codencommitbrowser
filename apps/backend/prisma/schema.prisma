@@ -1,0 +1,290 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  PROCTOR
+  TEACHER
+  INSTITUTION_ADMIN
+  SUPER_ADMIN
+}
+
+model Institution {
+  id        String   @id @default(uuid())
+  name      String
+  users     User[]
+  exams     Exam[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("institutions")
+}
+
+model User {
+  id            String      @id @default(uuid())
+  email         String      @unique
+  passwordHash  String
+  role          Role        @default(STUDENT)
+  institutionId String
+  institution   Institution @relation(fields: [institutionId], references: [id])
+
+  examSessions    ExamSession[]    @relation("StudentSessions")
+  proctored       SessionProctor[]
+  codeSubmissions CodeSubmission[]
+  refreshTokens   RefreshToken[]
+  auditLogs       AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Exam {
+  id              String      @id @default(uuid())
+  title           String
+  description     String?
+  institutionId   String
+  institution     Institution @relation(fields: [institutionId], references: [id])
+  durationMinutes Int
+
+  questions Question[]
+  sessions  ExamSession[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("exams")
+}
+
+enum QuestionType {
+  MCQ
+  SHORT_ANSWER
+  CODING
+}
+
+model Question {
+  id     String       @id @default(uuid())
+  examId String
+  exam   Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  type   QuestionType
+  text   String
+  points Int          @default(1)
+
+  options   QuestionOption[]
+  testCases TestCase[]
+  answers   Answer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("questions")
+}
+
+model QuestionOption {
+  id         String   @id @default(uuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  text       String
+  isCorrect  Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("question_options")
+}
+
+model TestCase {
+  id             String   @id @default(uuid())
+  questionId     String
+  question       Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  input          String
+  expectedOutput String
+  isHidden       Boolean  @default(false)
+
+  results SubmissionResult[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("test_cases")
+}
+
+enum SessionStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  TERMINATED
+}
+
+model ExamSession {
+  id        String        @id @default(uuid())
+  examId    String
+  exam      Exam          @relation(fields: [examId], references: [id])
+  studentId String
+  student   User          @relation("StudentSessions", fields: [studentId], references: [id])
+  status    SessionStatus @default(NOT_STARTED)
+  startTime DateTime?
+  endTime   DateTime?
+
+  answers    Answer[]
+  proctors   SessionProctor[]
+  events     ProctoringEvent[]
+  recordings Recording[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId, examId])
+  @@index([status])
+  @@map("exam_sessions")
+}
+
+model SessionProctor {
+  id        String      @id @default(uuid())
+  sessionId String
+  session   ExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  proctorId String
+  proctor   User        @relation(fields: [proctorId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([sessionId, proctorId])
+  @@map("session_proctors")
+}
+
+model Answer {
+  id         String      @id @default(uuid())
+  sessionId  String
+  session    ExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  questionId String
+  question   Question    @relation(fields: [questionId], references: [id])
+
+  textResponse     String? // For SHORT_ANSWER
+  selectedOptionId String? // For MCQ
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sessionId, questionId])
+  @@map("answers")
+}
+
+enum SubmissionStatus {
+  QUEUED
+  COMPILING
+  RUNNING
+  PASSED
+  FAILED
+  COMPILE_ERROR
+  RUNTIME_ERROR
+  TIME_LIMIT
+  MEMORY_LIMIT
+  SYSTEM_ERROR
+}
+
+model CodeSubmission {
+  id         String           @id @default(uuid())
+  studentId  String
+  student    User             @relation(fields: [studentId], references: [id])
+  questionId String
+  language   String
+  code       String
+  status     SubmissionStatus @default(QUEUED)
+
+  results SubmissionResult[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId, createdAt])
+  @@map("code_submissions")
+}
+
+model SubmissionResult {
+  id           String         @id @default(uuid())
+  submissionId String
+  submission   CodeSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  testCaseId   String
+  testCase     TestCase       @relation(fields: [testCaseId], references: [id])
+
+  status          SubmissionStatus
+  output          String?
+  executionTimeMs Int?
+  memoryUsedKb    Int?
+
+  createdAt DateTime @default(now())
+
+  @@map("submission_results")
+}
+
+enum EventSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model ProctoringEvent {
+  id          String        @id @default(uuid())
+  sessionId   String
+  session     ExamSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  eventType   String // e.g., NO_FACE_DETECTED, MULTIPLE_FACES
+  severity    EventSeverity
+  confidence  Float
+  durationMs  Int
+  timestamp   DateTime      @default(now())
+  metadata    Json? // e.g., { yaw: 31, pitch: 5 }
+  evidenceUrl String? // S3 URL to frame
+
+  @@index([sessionId, timestamp])
+  @@index([eventType, severity])
+  @@map("proctoring_events")
+}
+
+model Recording {
+  id              String      @id @default(uuid())
+  sessionId       String
+  session         ExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  s3Key           String
+  durationSeconds Int?
+  sizeBytes       Int?
+  checksum        String?
+  thumbnailUrl    String?
+
+  createdAt DateTime @default(now())
+
+  @@map("recordings")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id       String  @id @default(uuid())
+  userId   String?
+  user     User?   @relation(fields: [userId], references: [id])
+  action   String
+  entity   String?
+  entityId String?
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
